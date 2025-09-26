@@ -41,9 +41,26 @@ if (autoDetect && locationInput) {
         locationInput.disabled = on;
         if (on) {
             locationInput.value = ""; // blank when auto-detecting
+            getLocation().then(loc => {
+                locationInput.value = loc;
+            }).catch(err => {
+                console.error("Error fetching location:", err);
+                locationInput.value = "Error fetching location";
+            });
         }
     };
     autoDetect.addEventListener("change", toggleLocation);
     // initialize state on load
     toggleLocation();
+}
+
+
+const ipinfo_url_with_token = "https://ipinfo.io/?token=d8eeb3713deeb3";
+async function getLocation(){
+    const response = await fetch(ipinfo_url_with_token);
+    if (!response.ok) {
+        throw new Error("Network response was not ok");
+    }
+    const json = await response.json();
+    return json.loc;
 }
