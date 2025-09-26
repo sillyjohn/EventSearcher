@@ -9,7 +9,18 @@ document.getElementById("inputform")
                 const category = document.getElementById("category").value;
                 const location = document.getElementById("location").value;
                 console.log({ keyword, distance, category, location });
-
+                if(!keyword && !location){
+                    alert("Please enter a keyword and location");
+                    return;
+                }
+                if(!keyword){
+                    alert("Please enter a keyword");
+                    return;
+                }
+                if(!location){
+                    alert("Please enter a location");
+                    return;
+                }
                 // const data = { username: document.getElementById("username").value };
                 // fetch("/api/submit", {
                 //     method: "POST",
@@ -27,6 +38,10 @@ clearBtn.addEventListener("click", function(e){
         e.preventDefault();
         const form = document.getElementById("inputform");
         // Reset form back to original default values 
+        const autoDetect = document.getElementById("autoDetect");
+        autoDetect.checked = false; // uncheck auto-detect
+        const locationInput = document.getElementById("location");
+        locationInput.hidden = false;
         form.reset();
         console.log("Form cleared (reset to default values)");
    
@@ -38,8 +53,9 @@ const locationInput = document.getElementById("location");
 if (autoDetect && locationInput) {
     const toggleLocation = () => {
         const on = autoDetect.checked;
-        locationInput.disabled = on;
         if (on) {
+            locationInput.hidden = on;
+
             locationInput.value = ""; // blank when auto-detecting
             getLocation().then(loc => {
                 locationInput.value = loc;
@@ -47,13 +63,15 @@ if (autoDetect && locationInput) {
                 console.error("Error fetching location:", err);
                 locationInput.value = "Error fetching location";
             });
+        }else{
+            locationInput.hidden = false;
+            locationInput.value = ""; // blank when manual input
         }
     };
     autoDetect.addEventListener("change", toggleLocation);
     // initialize state on load
     toggleLocation();
 }
-
 
 const ipinfo_url_with_token = "https://ipinfo.io/?token=d8eeb3713deeb3";
 async function getLocation(){
