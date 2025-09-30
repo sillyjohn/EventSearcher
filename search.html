@@ -64,6 +64,25 @@
 						</div>
 					</form>
 				</div>
+                <section id="resultsSection" class="mt-10">
+                    <p id="noResultsMessage" class="hidden text-center text-red-500 font-semibold text-lg">No record found.</p>
+                    <div id="resultsTableWrapper" class="hidden overflow-x-auto rounded-lg bg-gray-900/70 shadow-lg">
+                        <table class="min-w-full divide-y divide-gray-700 text-left text-sm text-white">
+                            <thead class="bg-gray-800/80 text-xs uppercase tracking-wider text-gray-300">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3">Date</th>
+                                    <th scope="col" class="px-6 py-3">Icon</th>
+                                    <th scope="col" class="px-6 py-3">Event</th>
+                                    <th scope="col" class="px-6 py-3">Genre</th>
+                                    <th scope="col" class="px-6 py-3">Venue</th>
+                                </tr>
+                            </thead>
+                            <tbody id="resultsBody" class="divide-y divide-gray-700">
+                                <!-- Rows injected by script.js -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
 			</main>
 
 			<footer class="text-center mt-12 py-6 border-t border-gray-200">
