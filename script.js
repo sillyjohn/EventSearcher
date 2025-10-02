@@ -8,6 +8,54 @@ const noResultsMessage = document.getElementById('noResultsMessage');
 const autoDetectCheckbox = document.getElementById('autoDetect');
 const locationInput = document.getElementById('location');
 let toggleLocationHandler = null;
+const eventModal = document.getElementById('eventModal');
+const eventModalOverlay = document.getElementById('eventModalOverlay');
+const modalCloseButton = document.getElementById('modalCloseButton');
+const modalEventTitle = document.getElementById('modalEventTitle');
+const modalArtists = document.getElementById('modalArtists');
+const modalDate = document.getElementById('modalDate');
+const modalTime = document.getElementById('modalTime');
+const modalVenue = document.getElementById('modalVenue');
+const modalGenres = document.getElementById('modalGenres');
+const modalPriceRange = document.getElementById('modalPriceRange');
+const modalTicketStatus = document.getElementById('modalTicketStatus');
+const modalBuyLink = document.getElementById('modalBuyLink');
+const modalSeatMapWrapper = document.getElementById('modalSeatMapWrapper');
+const modalSeatMap = document.getElementById('modalSeatMap');
+let lastFocusedElement = null;
+
+const TICKET_STATUS_STYLES = {
+  'ON SALE': {
+    label: 'On Sale',
+    classes: ['bg-emerald-500/20', 'text-emerald-300', 'border-emerald-500/40']
+  },
+  'OFF SALE': {
+    label: 'Off Sale',
+    classes: ['bg-rose-500/20', 'text-rose-300', 'border-rose-500/40']
+  },
+  'CANCELED': {
+    label: 'Canceled',
+    classes: ['bg-gray-900', 'text-white', 'border-gray-600']
+  },
+  'POSTPONED': {
+    label: 'Postponed',
+    classes: ['bg-amber-500/20', 'text-amber-300', 'border-amber-500/40']
+  },
+  'RESCHEDULED': {
+    label: 'Rescheduled',
+    classes: ['bg-amber-500/20', 'text-amber-300', 'border-amber-500/40']
+  }
+};
+
+const TICKET_STATUS_DEFAULT = {
+  label: 'N/A',
+  classes: ['bg-slate-600/20', 'text-slate-200', 'border-slate-500/40']
+};
+
+const TICKET_STATUS_ALL_CLASSES = Array.from(new Set([
+  ...TICKET_STATUS_DEFAULT.classes,
+  ...Object.values(TICKET_STATUS_STYLES).flatMap(item => item.classes)
+]));
 
 function resetResultsDisplay() {
   if (resultsBody) {
@@ -43,20 +91,21 @@ function normalizeEvents(payload) {
   return [];
 }
 
-function formatEventDate(event) {
+function getEventDateParts(event) {
   const date = event?.dates?.start?.localDate || event?.date || event?.datetime || event?.startDate || '';
   const time = event?.dates?.start?.localTime || event?.time || event?.startTime || '';
-  if (!date && !time) return 'N/A';
-  return time ? `${date} ${time}` : date;
+  return {
+    date: date || '',
+    time: time || ''
+  };
 }
 
 function getEventIcon(event) {
-  if (Array.isArray(event?.images) && event.images.length) {
-    // prefer image with ratio close to 4:3 if available
-    const preferred = event.images.find(img => img?.ratio === '3_2') || event.images[0];
-    return preferred?.url || '';
+  if (typeof event?.imageUrl === 'string' && event.imageUrl.trim()) {
+    return event.imageUrl;
+  } else {
+    return '';
   }
-  return event?.icon || event?.image || '';
 }
 
 function getEventGenre(event) {
@@ -71,6 +120,229 @@ function getEventVenue(event) {
     || event?.venue
     || event?.location
     || 'N/A';
+}
+
+function formatPipeSeparated(value) {
+  if (!value) return 'N/A';
+  if (Array.isArray(value)) {
+    const names = value
+      .map(item => {
+        if (typeof item === 'string') return item.trim();
+        if (item && typeof item === 'object') {
+          return item.name || item.title || item.text || '';
+        }
+        return '';
+      })
+      .filter(Boolean);
+    return names.length ? names.join(' | ') : 'N/A';
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed ? trimmed : 'N/A';
+  }
+  return 'N/A';
+}
+
+function formatPriceRange(detail) {
+  if (!detail) return 'N/A';
+  if (typeof detail.priceRange === 'string' && detail.priceRange.trim()) {
+    return detail.priceRange.trim();
+  }
+  if (Array.isArray(detail.priceRanges) && detail.priceRanges.length) {
+    const formatted = detail.priceRanges.map(pr => {
+      if (!pr) return '';
+      const currency = pr.currency || pr.currencyCode || '';
+      const min = pr.min ?? pr.minPrice;
+      const max = pr.max ?? pr.maxPrice;
+      if (min != null && max != null) {
+        return `${currency ? currency + ' ' : ''}${min} - ${currency ? currency + ' ' : ''}${max}`;
+      }
+      if (min != null) {
+        return `${currency ? currency + ' ' : ''}${min}+`;
+      }
+      if (max != null) {
+        return `${currency ? currency + ' ' : ''}${max}`;
+      }
+      return pr.type || '';
+    }).filter(Boolean);
+    if (formatted.length) return formatted.join(' | ');
+  }
+
+  const min = detail.minPrice ?? detail.priceMin;
+  const max = detail.maxPrice ?? detail.priceMax;
+  const currency = detail.currency || detail.currencyCode || '';
+  if (min != null && max != null) {
+    return `${currency ? currency + ' ' : ''}${min} - ${currency ? currency + ' ' : ''}${max}`;
+  }
+  if (min != null) {
+    return `${currency ? currency + ' ' : ''}${min}+`;
+  }
+  if (max != null) {
+    return `${currency ? currency + ' ' : ''}${max}`;
+  }
+  return 'N/A';
+}
+
+function applyTicketStatusStyle(rawStatus) {
+  if (!modalTicketStatus) return;
+
+  const normalized = (rawStatus ?? '').toString().trim();
+  const statusKey = normalized.toUpperCase();
+  const styleConfig = TICKET_STATUS_STYLES[statusKey] || TICKET_STATUS_DEFAULT;
+
+  modalTicketStatus.classList.remove(...TICKET_STATUS_ALL_CLASSES);
+  modalTicketStatus.classList.add(...styleConfig.classes);
+
+  const displayText = normalized
+    ? (styleConfig.label || normalized)
+    : TICKET_STATUS_DEFAULT.label;
+  modalTicketStatus.textContent = displayText;
+}
+
+function resolveSeatMapUrl(detail) {
+  if (!detail) return '';
+  if (typeof detail.seatMap === 'string' && detail.seatMap.trim()) {
+    return detail.seatMap.trim();
+  }
+  if (detail.seatMap && typeof detail.seatMap === 'object') {
+    return detail.seatMap.staticUrl || detail.seatMap.url || detail.seatMap.href || '';
+  }
+  if (typeof detail.seatmap === 'string' && detail.seatmap.trim()) {
+    return detail.seatmap.trim();
+  }
+  if (detail.seatmap && typeof detail.seatmap === 'object') {
+    return detail.seatmap.staticUrl || detail.seatmap.url || '';
+  }
+  return '';
+}
+
+function buildEventDetailURL(eventId) {
+  const params= new URLSearchParams({ id: eventId });
+  return `${serverURL_Debug}/event?${params.toString()}`;
+}
+
+function openEventModal(detail) {
+  if (!eventModal) return;
+
+  lastFocusedElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+  const title = detail?.name || detail?.eventName || detail?.title || 'Event Details';
+  if (modalEventTitle) modalEventTitle.textContent = title;
+
+  if (modalArtists) {
+    modalArtists.textContent = formatPipeSeparated(detail?.artistsOrTeams || detail?.artists || detail?.attractions);
+  }
+  if (modalDate) {
+    modalDate.textContent = detail?.date || detail?.dates?.start?.localDate || 'N/A';
+  }
+  if (modalTime) {
+    modalTime.textContent = detail?.time || detail?.dates?.start?.localTime || 'N/A';
+  }
+
+  let venueValue = detail?.venue;
+  if (!venueValue && detail?._embedded?.venues?.length) {
+    venueValue = detail._embedded.venues[0]?.name;
+  }
+  if (!venueValue && Array.isArray(detail?.venues) && detail.venues.length) {
+    venueValue = detail.venues[0]?.name;
+  }
+  if (modalVenue) {
+    modalVenue.textContent = venueValue || 'N/A';
+  }
+
+  if (modalGenres) {
+    modalGenres.textContent = formatPipeSeparated(detail?.genres || detail?.classifications || detail?.segment);
+  }
+  if (modalPriceRange) {
+    modalPriceRange.textContent = formatPriceRange(detail);
+  }
+
+  const ticketStatus = typeof detail?.ticketstatus === 'string'
+    ? detail.ticketstatus
+    : detail?.ticketstatus?.status || detail?.status || '';
+  applyTicketStatusStyle(ticketStatus);
+
+  if (modalBuyLink) {
+    const buyUrl = detail?.buyAt || detail?.url || detail?.purchaseLink;
+    if (buyUrl) {
+      modalBuyLink.href = buyUrl;
+      modalBuyLink.textContent = 'Purchase Tickets';
+      modalBuyLink.classList.remove('pointer-events-none', 'opacity-50');
+      modalBuyLink.setAttribute('aria-disabled', 'false');
+      modalBuyLink.setAttribute('tabindex', '0');
+    } else {
+      modalBuyLink.href = '#';
+      modalBuyLink.textContent = 'No tickets available';
+      modalBuyLink.classList.add('pointer-events-none', 'opacity-50');
+      modalBuyLink.setAttribute('aria-disabled', 'true');
+      modalBuyLink.setAttribute('tabindex', '-1');
+    }
+  }
+
+  const seatMapUrl = resolveSeatMapUrl(detail);
+  if (modalSeatMapWrapper && modalSeatMap) {
+    if (seatMapUrl) {
+      modalSeatMap.src = seatMapUrl;
+      modalSeatMap.alt = `${title} seat map`;
+      modalSeatMapWrapper.classList.remove('hidden');
+    } else {
+      modalSeatMap.src = 'about:blank';
+      modalSeatMap.alt = 'Seat map not available';
+      modalSeatMapWrapper.classList.add('hidden');
+    }
+  }
+
+  eventModal.classList.remove('hidden');
+  eventModal.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('overflow-hidden');
+  if (modalCloseButton) {
+    setTimeout(() => modalCloseButton.focus(), 0);
+  }
+}
+
+function closeEventModal() {
+  if (!eventModal || eventModal.classList.contains('hidden')) return;
+  eventModal.classList.add('hidden');
+  eventModal.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('overflow-hidden');
+  if (modalSeatMap) {
+    modalSeatMap.src = 'about:blank';
+  }
+  applyTicketStatusStyle('');
+  if (lastFocusedElement) {
+    setTimeout(() => lastFocusedElement.focus(), 0);
+  }
+  lastFocusedElement = null;
+}
+
+function fetchEventDetails(eventId) {
+  if (!eventId) {
+    console.warn('Missing event id for detail fetch');
+    return;
+  }
+
+  const detailUrl = buildEventDetailURL(eventId);
+  console.log('Fetching event details:', detailUrl);
+
+  fetch(detailUrl, {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json'
+    }
+  })
+    .then(res => {
+      if (!res.ok) throw new Error(`Detail HTTP ${res.status}`);
+      return res.json();
+    })
+    .then(detail => {
+      console.log('Event detail loaded:', detail);
+      const modalData = detail?.event || detail?.data || detail;
+      openEventModal(modalData);
+    })
+    .catch(err => {
+      console.error('Failed to fetch event detail:', err);
+      alert('Unable to load event details. Please try again.');
+    });
 }
 
 function renderResults(payload) {
@@ -88,11 +360,39 @@ function renderResults(payload) {
   const fragment = document.createDocumentFragment();
   events.forEach(event => {
     const row = document.createElement('tr');
-    row.className = 'hover:bg-gray-800/60 transition-colors';
+    row.className = 'hover:bg-gray-800/60 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 focus:ring-offset-gray-900';
+    row.id = event.id;
+    row.tabIndex = 0;
+    row.setAttribute('role', 'button');
+
+    const handleRowActivation = () => fetchEventDetails(event?.id);
+    row.addEventListener('click', handleRowActivation);
+    row.addEventListener('keydown', (evt) => {
+      if (evt.key === 'Enter' || evt.key === ' ') {
+        evt.preventDefault();
+        handleRowActivation();
+      }
+    });
 
     const dateCell = document.createElement('td');
     dateCell.className = 'px-6 py-4 whitespace-nowrap text-sm text-gray-200';
-    dateCell.textContent = formatEventDate(event);
+    const { date, time } = getEventDateParts(event);
+    if (!date && !time) {
+      dateCell.textContent = 'N/A';
+    } else {
+      if (date) {
+        const dateLine = document.createElement('div');
+        dateLine.textContent = date;
+        dateLine.className = 'font-semibold';
+        dateCell.appendChild(dateLine);
+      }
+      if (time) {
+        const timeLine = document.createElement('div');
+        timeLine.textContent = time;
+        timeLine.className = 'text-xs text-gray-400';
+        dateCell.appendChild(timeLine);
+      }
+    }
     row.appendChild(dateCell);
 
     const iconCell = document.createElement('td');
@@ -102,7 +402,7 @@ function renderResults(payload) {
       const img = document.createElement('img');
       img.src = iconUrl;
       img.alt = event?.name ? `${event.name} poster` : 'Event poster';
-      img.className = 'h-12 w-12 rounded object-cover border border-gray-700';
+      img.className = 'h-30 w-40 rounded object-cover border border-gray-700';
       iconCell.appendChild(img);
     } else {
       iconCell.textContent = '—';
@@ -133,6 +433,20 @@ function renderResults(payload) {
   noResultsMessage.classList.add('hidden');
   resultsTableWrapper.classList.remove('hidden');
 }
+
+if (modalCloseButton) {
+  modalCloseButton.addEventListener('click', closeEventModal);
+}
+if (eventModalOverlay) {
+  eventModalOverlay.addEventListener('click', closeEventModal);
+}
+document.addEventListener('keydown', (evt) => {
+  if (evt.key === 'Escape' && eventModal && !eventModal.classList.contains('hidden')) {
+    closeEventModal();
+  }
+});
+
+applyTicketStatusStyle('');
 
 //Submit button
 document.getElementById("inputform")

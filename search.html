@@ -83,6 +83,68 @@
                         </table>
                     </div>
                 </section>
+				<div id="eventModal" class="fixed inset-0 z-50 hidden">
+					<div id="eventModalOverlay" class="absolute inset-0 bg-black/70"></div>
+					<div class="relative z-10 flex min-h-full items-center justify-center p-4">
+						<div class="w-full max-w-3xl rounded-xl border border-gray-700 bg-gray-900/95 shadow-2xl">
+							<div class="flex items-start justify-between border-b border-gray-700 px-6 py-4">
+								<h2 id="modalEventTitle" class="text-2xl font-semibold text-white">Event Details</h2>
+								<button id="modalCloseButton" type="button" aria-label="Close details"
+									class="text-gray-400 transition hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900">
+									✕
+								</button>
+							</div>
+							<div class="space-y-6 px-6 py-6 text-sm text-gray-200">
+								<div class="grid gap-4 md:grid-cols-2">
+									<dl class="space-y-3">
+										<div>
+											<dt class="uppercase text-xs tracking-wider text-gray-400">Artist / Team</dt>
+											<dd id="modalArtists" class="mt-1 text-base text-white">N/A</dd>
+										</div>
+										<div>
+											<dt class="uppercase text-xs tracking-wider text-gray-400">Date</dt>
+											<dd id="modalDate" class="mt-1 text-base text-white">N/A</dd>
+										</div>
+										<div>
+											<dt class="uppercase text-xs tracking-wider text-gray-400">Time</dt>
+											<dd id="modalTime" class="mt-1 text-base text-white">N/A</dd>
+										</div>
+										<div>
+											<dt class="uppercase text-xs tracking-wider text-gray-400">Venue</dt>
+											<dd id="modalVenue" class="mt-1 text-base text-white">N/A</dd>
+										</div>
+									</dl>
+									<dl class="space-y-3">
+										<div>
+											<dt class="uppercase text-xs tracking-wider text-gray-400">Genres</dt>
+											<dd id="modalGenres" class="mt-1 text-base text-white">N/A</dd>
+										</div>
+										<div>
+											<dt class="uppercase text-xs tracking-wider text-gray-400">Price Range</dt>
+											<dd id="modalPriceRange" class="mt-1 text-base text-white">N/A</dd>
+										</div>
+										<div>
+											<dt class="uppercase text-xs tracking-wider text-gray-400">Ticket Status</dt>
+											<dd id="modalTicketStatus" class="mt-1 inline-flex items-center rounded-md px-3 py-1 text-sm font-semibold border">N/A</dd>
+										</div>
+										<div>
+											<dt class="uppercase text-xs tracking-wider text-gray-400">Buy Ticket At</dt>
+											<dd class="mt-1">
+												<a id="modalBuyLink" href="#" target="_blank" rel="noopener" class="inline-flex items-center gap-2 rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-gray-900">
+													Purchase Tickets
+												</a>
+											</dd>
+										</div>
+									</dl>
+								</div>
+								<div id="modalSeatMapWrapper" class="hidden border-t border-gray-800 pt-4">
+									<h3 class="mb-3 text-lg font-semibold text-white">Seat Map</h3>
+									<img id="modalSeatMap" src="about:blank" alt="Seat map" class="max-h-96 w-full rounded-lg border border-gray-800 object-contain" />
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
 			</main>
 
 			<footer class="text-center mt-12 py-6 border-t border-gray-200">
