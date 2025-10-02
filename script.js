@@ -22,14 +22,27 @@ const modalTicketStatus = document.getElementById('modalTicketStatus');
 const modalBuyLink = document.getElementById('modalBuyLink');
 const modalSeatMapWrapper = document.getElementById('modalSeatMapWrapper');
 const modalSeatMap = document.getElementById('modalSeatMap');
+// Venue detail toggle elements
+const modalEventContent = document.getElementById('modalEventContent');
+const modalVenueContent = document.getElementById('modalVenueContent');
+const venueToggleButton = document.getElementById('venueToggleButton');
+const venueToggleIcon = document.getElementById('venueToggleIcon');
+const venueToggleText = document.getElementById('venueToggleText');
+const venueRevealBar = document.getElementById('venueRevealBar');
+const venueDetailName = document.getElementById('venueDetailName');
+const venueDetailLocation = document.getElementById('venueDetailLocation');
+const venueGoogleMapLink = document.getElementById('venueGoogleMapLink');
+const venueMoreEventsLink = document.getElementById('venueMoreEventsLink');
 let lastFocusedElement = null;
 
+let currentVenueData = null; // cache venue info from detail object
+
 const TICKET_STATUS_STYLES = {
-  'ON SALE': {
+  'ONSALE': {
     label: 'On Sale',
     classes: ['bg-emerald-500/20', 'text-emerald-300', 'border-emerald-500/40']
   },
-  'OFF SALE': {
+  'OFFSALE': {
     label: 'Off Sale',
     classes: ['bg-rose-500/20', 'text-rose-300', 'border-rose-500/40']
   },
@@ -188,6 +201,7 @@ function applyTicketStatusStyle(rawStatus) {
 
   const normalized = (rawStatus ?? '').toString().trim();
   const statusKey = normalized.toUpperCase();
+  console.log('Applying ticket status style:', { rawStatus, normalized, statusKey });
   const styleConfig = TICKET_STATUS_STYLES[statusKey] || TICKET_STATUS_DEFAULT;
 
   modalTicketStatus.classList.remove(...TICKET_STATUS_ALL_CLASSES);
@@ -257,9 +271,8 @@ function openEventModal(detail) {
     modalPriceRange.textContent = formatPriceRange(detail);
   }
 
-  const ticketStatus = typeof detail?.ticketstatus === 'string'
-    ? detail.ticketstatus
-    : detail?.ticketstatus?.status || detail?.status || '';
+  const ticketStatus = detail?.ticketStatus;
+  console.log('Event ticket status:', ticketStatus);
   applyTicketStatusStyle(ticketStatus);
 
   if (modalBuyLink) {
@@ -298,7 +311,58 @@ function openEventModal(detail) {
   if (modalCloseButton) {
     setTimeout(() => modalCloseButton.focus(), 0);
   }
+
+  // Reset to event view when opening
+  if (modalEventContent && modalVenueContent) {
+    // Ensure event content visible, venue content hidden until user reveals
+    modalEventContent.classList.remove('hidden');
+    modalVenueContent.classList.add('hidden');
+    if (venueToggleIcon) venueToggleIcon.textContent = '▼';
+    if (venueToggleText) venueToggleText.textContent = 'Show Venue Details';
+    if (venueRevealBar) venueRevealBar.classList.remove('hidden');
+  }
+
+  // Extract venue information for venue view
+  // currentVenueData = extractVenueInfo(detail);
+
+  //console.log('Extracted venue info:', currentVenueData);
+  fetchVenueDetails(venueValue);
 }
+
+function buildVenueDetailURL(keyword) { 
+    const params= new URLSearchParams({ keyword: keyword });
+    return `${serverURL_Debug}/venue?${params.toString()}`;
+}
+
+function fetchVenueDetails(keyword) {
+    if (!keyword) {
+        console.warn('Missing keyword for venue detail fetch');
+        return;
+    }
+    const detailUrl = buildVenueDetailURL(keyword);
+    console.log('Fetching venue details:', detailUrl);
+    fetch(detailUrl, {
+        method: 'GET',
+        headers: {
+            'Accept': 'application/json'
+
+        }           
+    })
+    .then(res => {
+        if (!res.ok) throw new Error(`Venue Detail HTTP ${res.status}`);
+        return res.json();
+    })
+    .then(detail => {
+        console.log('Venue detail loaded:', detail);
+        populateVenueDetails(detail);
+    })
+    .catch(err => {
+        console.error('Failed to fetch venue detail:', err);
+        alert('Unable to load venue details. Please try again.');
+    });
+}           
+
+
 
 function closeEventModal() {
   if (!eventModal || eventModal.classList.contains('hidden')) return;
@@ -343,6 +407,34 @@ function fetchEventDetails(eventId) {
       console.error('Failed to fetch event detail:', err);
       alert('Unable to load event details. Please try again.');
     });
+}
+
+function populateVenueDetails(venueData) {
+  //if (!venueData) return;
+  console.log('Populating venue details:', venueData);
+  if (venueDetailName) venueDetailName.textContent = venueData.name;
+  if (venueDetailLocation) venueDetailLocation.textContent = venueData.address + ', ' + venueData.city +', '+ venueData.postalCode;
+  if (venueGoogleMapLink) {
+    venueGoogleMapLink.href = venueData.googleMapUrl;
+    venueGoogleMapLink.classList.toggle('pointer-events-none', !venueData.googleMapUrl);
+  }
+  if (venueMoreEventsLink) {
+    venueMoreEventsLink.href = venueData.upcomingEventURL;
+    venueMoreEventsLink.classList.toggle('pointer-events-none', !venueData.upcomingEventURL);
+  }
+}
+
+if (venueToggleButton && modalVenueContent) {
+  venueToggleButton.addEventListener('click', () => {
+    // Reveal venue card, keep event content (decision: show both stacked) OR hide event? Spec says "a Venue details card should be displayed" and button disappears.
+    // We'll keep event content and just add venue card below for context.
+    modalVenueContent.classList.remove('hidden');
+    if (venueRevealBar) venueRevealBar.classList.add('hidden');
+    // Scroll smoothly to venue content
+    setTimeout(() => {
+      modalVenueContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+  });
 }
 
 function renderResults(payload) {
