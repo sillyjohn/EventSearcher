@@ -1,6 +1,7 @@
 //Server Url Debug
 const serverURL_Debug = 'http://127.0.0.1:5000';
-
+const googleCloudUrl='https://eventsearcher-server.wl.r.appspot.com'
+const debugMode = false // 'debug' or 'production'
 // Results UI elements
 const resultsTableWrapper = document.getElementById('resultsTableWrapper');
 const resultsBody = document.getElementById('resultsBody');
@@ -232,7 +233,10 @@ function resolveSeatMapUrl(detail) {
 
 function buildEventDetailURL(eventId) {
   const params= new URLSearchParams({ id: eventId });
-  return `${serverURL_Debug}/event?${params.toString()}`;
+  if (debugMode)
+    return `${serverURL_Debug}/event?${params.toString()}`;
+  else
+    return `${googleCloudUrl}/event?${params.toString()}`;
 }
 
 function openEventModal(detail) {
@@ -331,7 +335,11 @@ function openEventModal(detail) {
 
 function buildVenueDetailURL(keyword) { 
     const params= new URLSearchParams({ keyword: keyword });
-    return `${serverURL_Debug}/venue?${params.toString()}`;
+    if (debugMode)
+      return `${serverURL_Debug}/venue?${params.toString()}`;
+    else
+      return `${googleCloudUrl}/venue?${params.toString()}`;
+
 }
 
 function fetchVenueDetails(keyword) {
@@ -573,8 +581,11 @@ document.getElementById("inputform")
     if (autoDetectCheckbox && autoDetectCheckbox.checked) {
       params.append('autoDetect', 'true');
     }
-
-    const url = `${serverURL_Debug}/submit?${params.toString()}`;
+    let url = '';
+    if (debugMode)
+      url = `${serverURL_Debug}/submit?${params.toString()}`;
+    else
+      url = `${googleCloudUrl}/submit?${params.toString()}`;
     console.log('GET URL:', url);
 
     fetch(url, {
