@@ -1,0 +1,31 @@
+runtime: nodejs24
+
+handlers:
+  # Home page
+  - url: /
+    static_files: index.html
+    upload: index.html
+
+  - url: /search.html
+    static_files: search.html
+    upload: search.html
+
+  # Your JS file
+  - url: /script.js
+    static_files: script.js
+    upload: script.js
+
+  - url: /styles.css
+    static_files: styles.css
+    upload: styles.css  
+
+  - url: /Asset
+    static_dir: Asset
+
+  - url: /(.*\.(css|js|png|jpg|jpeg|gif|svg|ico|webp|txt|json|map))
+    static_files: \1
+    upload: .*\.(css|js|png|jpg|jpeg|gif|svg|ico|webp|txt|json|map)
+
+  - url: /.*
+    static_files: index.html
+    upload: index.html

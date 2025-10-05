@@ -1,7 +1,7 @@
 //Server Url Debug
 const serverURL_Debug = 'http://127.0.0.1:5000';
 const googleCloudUrl='https://eventsearcher-server.wl.r.appspot.com'
-const debugMode = false // 'debug' or 'production'
+const debugMode = true // 'debug' or 'production'
 // Results UI elements
 const resultsTableWrapper = document.getElementById('resultsTableWrapper');
 const resultsBody = document.getElementById('resultsBody');
@@ -37,6 +37,11 @@ const venueMoreEventsLink = document.getElementById('venueMoreEventsLink');
 let lastFocusedElement = null;
 
 let currentVenueData = null; // cache venue info from detail object
+
+let currentEvents = [];
+let currentSort = { key: null, direction: 'asc' };
+const collator = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true });
+const sortButtons = document.querySelectorAll('[data-sort-key]');
 
 const TICKET_STATUS_STYLES = {
   'ONSALE': {
@@ -82,6 +87,9 @@ function resetResultsDisplay() {
     noResultsMessage.classList.add('hidden');
     noResultsMessage.textContent = 'No record found.';
   }
+  currentEvents = [];
+  currentSort = { key: null, direction: 'asc' };
+  updateSortIndicators();
 }
 
 function showNoResults(message = 'No record found.') {
@@ -197,6 +205,223 @@ function formatPriceRange(detail) {
   return 'N/A';
 }
 
+function extractArtistNames(source) {
+  if (!source) return [];
+
+  if (Array.isArray(source)) {
+    return source
+      .map(item => {
+        if (typeof item === 'string') return item.trim();
+        if (item && typeof item === 'object') {
+          const value = item.name || item.title || item.text || '';
+          return typeof value === 'string' ? value.trim() : '';
+        }
+        return '';
+      })
+      .filter(Boolean);
+  }
+
+  if (typeof source === 'object') {
+    const value = source.name || source.title || source.text || '';
+    if (typeof value === 'string' && value.trim()) {
+      return [value.trim()];
+    }
+    return [];
+  }
+
+  if (typeof source === 'string') {
+    const trimmed = source.trim();
+    if (!trimmed) return [];
+    if (trimmed.includes('|')) {
+      return trimmed.split('|').map(part => part.trim()).filter(Boolean);
+    }
+    return [trimmed];
+  }
+
+  return [];
+}
+
+function normalizeUrlList(source) {
+  if (!source) return [];
+  if (Array.isArray(source)) {
+    return source.map(url => (typeof url === 'string' ? url.trim() : ''));
+  }
+  if (typeof source === 'string') {
+    const trimmed = source.trim();
+    if (!trimmed) return [];
+    return trimmed.split('|').map(part => part.trim());
+  }
+  return [];
+}
+
+function populateModalArtists(detail) {
+  if (!modalArtists) return;
+
+  const rawNames = detail?.artistsOrTeams || detail?.artists || detail?.attractions;
+  const names = extractArtistNames(rawNames);
+  const urls = normalizeUrlList(
+    detail?.artistOrTeamsURL ||
+    detail?.artistsOrTeamsURL ||
+    detail?.artistOrTeamsUrl ||
+    detail?.artistTeamUrls ||
+    detail?.artistUrls ||
+    detail?.attractionUrls
+  );
+
+  if (!names.length) {
+    modalArtists.textContent = formatPipeSeparated(rawNames);
+    return;
+  }
+
+  modalArtists.innerHTML = '';
+  names.forEach((name, index) => {
+    if (index > 0) {
+      modalArtists.appendChild(document.createTextNode(' | '));
+    }
+
+    const url = urls[index] || '';
+    if (url) {
+      const link = document.createElement('a');
+      link.href = url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.className = 'text-blue-400 hover:text-blue-300 underline';
+      link.textContent = name;
+      link.setAttribute('aria-label', `${name} (opens in new tab)`);
+      modalArtists.appendChild(link);
+    } else {
+      const span = document.createElement('span');
+      span.textContent = name;
+      modalArtists.appendChild(span);
+    }
+  });
+}
+
+function parseEventDateValue(event) {
+  const date = event?.dates?.start?.localDate || event?.date || event?.datetime || event?.startDate || '';
+  const time = event?.dates?.start?.localTime || event?.time || event?.startTime || '';
+
+  if (!date && !time) return null;
+
+  let candidate = '';
+  if (date) {
+    candidate = `${date}${time ? `T${time}` : 'T00:00:00'}`;
+  } else {
+    candidate = `1970-01-01T${time}`;
+  }
+
+  const parsed = Date.parse(candidate);
+  if (!Number.isNaN(parsed)) {
+    return parsed;
+  }
+
+  const fallback = Date.parse(date || time);
+  return Number.isNaN(fallback) ? null : fallback;
+}
+
+function getSortValue(event, key) {
+  switch (key) {
+    case 'date':
+      return parseEventDateValue(event);
+    case 'event': {
+      const name = (event?.name || '').trim();
+      return name || null;
+    }
+    case 'genre': {
+      const genre = getEventGenre(event);
+      return genre && genre !== 'N/A' ? genre : null;
+    }
+    case 'venue': {
+      const venue = getEventVenue(event);
+      return venue && venue !== 'N/A' ? venue : null;
+    }
+    default:
+      return null;
+  }
+}
+
+function compareEvents(a, b) {
+  if (!currentSort.key) return 0;
+
+  const directionMultiplier = currentSort.direction === 'asc' ? 1 : -1;
+  const valueA = getSortValue(a, currentSort.key);
+  const valueB = getSortValue(b, currentSort.key);
+
+  if (valueA == null && valueB == null) return 0;
+  if (valueA == null) return 1 * directionMultiplier;
+  if (valueB == null) return -1 * directionMultiplier;
+
+  if (typeof valueA === 'number' && typeof valueB === 'number') {
+    if (valueA === valueB) return 0;
+    return valueA < valueB ? -1 * directionMultiplier : 1 * directionMultiplier;
+  }
+
+  const comparison = collator.compare(valueA.toString(), valueB.toString());
+  if (comparison === 0) return 0;
+  return comparison * directionMultiplier;
+}
+
+function getSortedEvents() {
+  if (!currentEvents.length || !currentSort.key) {
+    return currentEvents.slice();
+  }
+  return currentEvents.slice().sort((a, b) => compareEvents(a, b));
+}
+
+function applySortAndRender() {
+  if (!currentEvents.length) {
+    renderEventsTable([]);
+    return;
+  }
+  renderEventsTable(getSortedEvents());
+}
+
+function updateSortIndicators() {
+  if (!sortButtons || !sortButtons.length) return;
+  sortButtons.forEach(button => {
+    const sortKey = button.dataset.sortKey;
+    const indicator = button.querySelector('.sort-indicator');
+    const isActive = currentSort.key === sortKey;
+    const th = button.closest('th');
+
+    button.classList.toggle('text-white', isActive);
+    button.classList.toggle('text-gray-300', !isActive);
+    if (indicator) {
+      indicator.textContent = currentSort.direction === 'asc' ? '▲' : '▼';
+      indicator.classList.toggle('opacity-0', !isActive);
+      indicator.classList.toggle('opacity-100', isActive);
+    }
+    if (th) {
+      th.setAttribute('aria-sort', isActive ? (currentSort.direction === 'asc' ? 'ascending' : 'descending') : 'none');
+    }
+  });
+}
+
+function handleSortButtonClick(event) {
+  const button = event.currentTarget;
+  if (!button) return;
+  const sortKey = button.dataset.sortKey;
+  if (!sortKey || !currentEvents.length) return;
+
+  if (currentSort.key === sortKey) {
+    currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+  } else {
+    currentSort.key = sortKey;
+    currentSort.direction = 'asc';
+  }
+
+  updateSortIndicators();
+  applySortAndRender();
+}
+
+if (sortButtons.length) {
+  sortButtons.forEach(button => {
+    button.addEventListener('click', handleSortButtonClick);
+  });
+}
+
+updateSortIndicators();
+
 function applyTicketStatusStyle(rawStatus) {
   if (!modalTicketStatus) return;
 
@@ -247,9 +472,7 @@ function openEventModal(detail) {
   const title = detail?.name || detail?.eventName || detail?.title || 'Event Details';
   if (modalEventTitle) modalEventTitle.textContent = title;
 
-  if (modalArtists) {
-    modalArtists.textContent = formatPipeSeparated(detail?.artistsOrTeams || detail?.artists || detail?.attractions);
-  }
+  populateModalArtists(detail);
   if (modalDate) {
     modalDate.textContent = detail?.date || detail?.dates?.start?.localDate || 'N/A';
   }
@@ -445,15 +668,15 @@ if (venueToggleButton && modalVenueContent) {
   });
 }
 
-function renderResults(payload) {
-  const events = normalizeEvents(payload);
-  if (!events.length) {
-    showNoResults();
+function renderEventsTable(events) {
+  if (!resultsBody || !resultsTableWrapper || !noResultsMessage) {
+    console.warn('Results table elements not found in DOM.');
     return;
   }
 
-  if (!resultsBody || !resultsTableWrapper || !noResultsMessage) {
-    console.warn('Results table elements not found in DOM.');
+  if (!events || !events.length) {
+    resultsBody.innerHTML = '';
+    resultsTableWrapper.classList.add('hidden');
     return;
   }
 
@@ -532,6 +755,22 @@ function renderResults(payload) {
   resultsBody.appendChild(fragment);
   noResultsMessage.classList.add('hidden');
   resultsTableWrapper.classList.remove('hidden');
+}
+
+function renderResults(payload) {
+  const events = normalizeEvents(payload);
+  currentEvents = Array.isArray(events) ? events.slice() : [];
+
+  if (!currentEvents.length) {
+    showNoResults();
+    currentSort = { key: null, direction: 'asc' };
+    updateSortIndicators();
+    return;
+  }
+
+  currentSort = { key: null, direction: 'asc' };
+  updateSortIndicators();
+  applySortAndRender();
 }
 
 if (modalCloseButton) {
