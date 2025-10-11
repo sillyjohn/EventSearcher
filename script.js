@@ -9,8 +9,7 @@ const noResultsMessage = document.getElementById('noResultsMessage');
 const autoDetectCheckbox = document.getElementById('autoDetect');
 const locationInput = document.getElementById('location');
 let toggleLocationHandler = null;
-const eventModal = document.getElementById('eventModal');
-const eventModalOverlay = document.getElementById('eventModalOverlay');
+const eventCard = document.getElementById('eventCard');
 const modalCloseButton = document.getElementById('modalCloseButton');
 const modalEventTitle = document.getElementById('modalEventTitle');
 const modalArtists = document.getElementById('modalArtists');
@@ -464,22 +463,46 @@ function buildEventDetailURL(eventId) {
     return `${googleCloudUrl}/event?${params.toString()}`;
 }
 
-function openEventModal(detail) {
-  if (!eventModal) return;
-
-  lastFocusedElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+function openEventCard(detail) {
+  if (!eventCard) return;
 
   const title = detail?.name || detail?.eventName || detail?.title || 'Event Details';
   if (modalEventTitle) modalEventTitle.textContent = title;
 
+  // Handle Artists/Teams field
+  const artistsField = document.getElementById('artistsField');
   populateModalArtists(detail);
-  if (modalDate) {
-    modalDate.textContent = detail?.date || detail?.dates?.start?.localDate || 'N/A';
-  }
-  if (modalTime) {
-    modalTime.textContent = detail?.time || detail?.dates?.start?.localTime || 'N/A';
+  const hasArtists = detail?.artistsOrTeams || detail?.artists || detail?.attractions;
+  if (artistsField) {
+    artistsField.style.display = hasArtists ? 'block' : 'none';
   }
 
+  // Handle Date field
+  const dateField = document.getElementById('dateField');
+  const dateValue = detail?.date || detail?.dates?.start?.localDate;
+  if (modalDate && dateField) {
+    if (dateValue) {
+      modalDate.textContent = dateValue;
+      dateField.style.display = 'block';
+    } else {
+      dateField.style.display = 'none';
+    }
+  }
+
+  // Handle Time field
+  const timeField = document.getElementById('timeField');
+  const timeValue = detail?.time || detail?.dates?.start?.localTime;
+  if (modalTime && timeField) {
+    if (timeValue) {
+      modalTime.textContent = timeValue;
+      timeField.style.display = 'block';
+    } else {
+      timeField.style.display = 'none';
+    }
+  }
+
+  // Handle Venue field
+  const venueField = document.getElementById('venueField');
   let venueValue = detail?.venue;
   if (!venueValue && detail?._embedded?.venues?.length) {
     venueValue = detail._embedded.venues[0]?.name;
@@ -487,22 +510,55 @@ function openEventModal(detail) {
   if (!venueValue && Array.isArray(detail?.venues) && detail.venues.length) {
     venueValue = detail.venues[0]?.name;
   }
-  if (modalVenue) {
-    modalVenue.textContent = venueValue || 'N/A';
+  if (modalVenue && venueField) {
+    if (venueValue) {
+      modalVenue.textContent = venueValue;
+      venueField.style.display = 'block';
+    } else {
+      venueField.style.display = 'none';
+    }
   }
 
-  if (modalGenres) {
-    modalGenres.textContent = formatPipeSeparated(detail?.genres || detail?.classifications || detail?.segment);
-  }
-  if (modalPriceRange) {
-    modalPriceRange.textContent = formatPriceRange(detail);
+  // Handle Genres field
+  const genresField = document.getElementById('genresField');
+  const genresValue = formatPipeSeparated(detail?.genres || detail?.classifications || detail?.segment);
+  if (modalGenres && genresField) {
+    if (genresValue && genresValue !== 'N/A') {
+      modalGenres.textContent = genresValue;
+      genresField.style.display = 'block';
+    } else {
+      genresField.style.display = 'none';
+    }
   }
 
+  // Handle Price Range field
+  const priceRangeField = document.getElementById('priceRangeField');
+  const priceValue = formatPriceRange(detail);
+  if (modalPriceRange && priceRangeField) {
+    if (priceValue && priceValue !== 'N/A') {
+      modalPriceRange.textContent = priceValue;
+      priceRangeField.style.display = 'block';
+    } else {
+      priceRangeField.style.display = 'none';
+    }
+  }
+
+  // Handle Ticket Status field
+  const ticketStatusField = document.getElementById('ticketStatusField');
   const ticketStatus = detail?.ticketStatus;
   console.log('Event ticket status:', ticketStatus);
-  applyTicketStatusStyle(ticketStatus);
+  if (ticketStatusField) {
+    if (ticketStatus && ticketStatus.trim() !== '') {
+      applyTicketStatusStyle(ticketStatus);
+      ticketStatusField.style.display = 'block';
+    } else {
+      ticketStatusField.style.display = 'none';
+    }
+  }
 
-  if (modalBuyLink) {
+  // Handle Buy Link field
+  const buyLinkField = document.getElementById('buyLinkField');
+  if (modalBuyLink && buyLinkField) {
     const buyUrl = detail?.buyAt || detail?.url || detail?.purchaseLink;
     if (buyUrl) {
       modalBuyLink.href = buyUrl;
@@ -510,12 +566,9 @@ function openEventModal(detail) {
       modalBuyLink.classList.remove('pointer-events-none', 'opacity-50');
       modalBuyLink.setAttribute('aria-disabled', 'false');
       modalBuyLink.setAttribute('tabindex', '0');
+      buyLinkField.style.display = 'block';
     } else {
-      modalBuyLink.href = '#';
-      modalBuyLink.textContent = 'No tickets available';
-      modalBuyLink.classList.add('pointer-events-none', 'opacity-50');
-      modalBuyLink.setAttribute('aria-disabled', 'true');
-      modalBuyLink.setAttribute('tabindex', '-1');
+      buyLinkField.style.display = 'none';
     }
   }
 
@@ -532,12 +585,15 @@ function openEventModal(detail) {
     }
   }
 
-  eventModal.classList.remove('hidden');
-  eventModal.setAttribute('aria-hidden', 'false');
-  document.body.classList.add('overflow-hidden');
-  if (modalCloseButton) {
-    setTimeout(() => modalCloseButton.focus(), 0);
-  }
+  eventCard.classList.remove('hidden');
+  
+  // Scroll to the card
+  setTimeout(() => {
+    eventCard.scrollIntoView({ 
+      behavior: 'smooth', 
+      block: 'start' 
+    });
+  }, 100);
 
   // Reset to event view when opening
   if (modalEventContent && modalVenueContent) {
@@ -595,19 +651,13 @@ function fetchVenueDetails(keyword) {
 
 
 
-function closeEventModal() {
-  if (!eventModal || eventModal.classList.contains('hidden')) return;
-  eventModal.classList.add('hidden');
-  eventModal.setAttribute('aria-hidden', 'true');
-  document.body.classList.remove('overflow-hidden');
+function closeEventCard() {
+  if (!eventCard || eventCard.classList.contains('hidden')) return;
+  eventCard.classList.add('hidden');
   if (modalSeatMap) {
     modalSeatMap.src = 'about:blank';
   }
   applyTicketStatusStyle('');
-  if (lastFocusedElement) {
-    setTimeout(() => lastFocusedElement.focus(), 0);
-  }
-  lastFocusedElement = null;
 }
 
 function fetchEventDetails(eventId) {
@@ -631,8 +681,8 @@ function fetchEventDetails(eventId) {
     })
     .then(detail => {
       console.log('Event detail loaded:', detail);
-      const modalData = detail?.event || detail?.data || detail;
-      openEventModal(modalData);
+      const cardData = detail?.event || detail?.data || detail;
+      openEventCard(cardData);
     })
     .catch(err => {
       console.error('Failed to fetch event detail:', err);
@@ -644,7 +694,17 @@ function populateVenueDetails(venueData) {
   //if (!venueData) return;
   console.log('Populating venue details:', venueData);
   if (venueDetailName) venueDetailName.textContent = venueData.name;
-  if (venueDetailLocation) venueDetailLocation.textContent = venueData.address + ', ' + venueData.city +', '+ venueData.postalCode;
+  if (venueDetailLocation) {
+    // Format address as: address, city, state postalCode
+    const addressParts = [
+      venueData.address,
+      venueData.city,
+      venueData.state,
+      venueData.postalCode
+    ].filter(Boolean); // Remove any undefined/null parts
+    
+    venueDetailLocation.textContent = addressParts.join(', ');
+  }
   if (venueGoogleMapLink) {
     venueGoogleMapLink.href = venueData.googleMapUrl;
     venueGoogleMapLink.classList.toggle('pointer-events-none', !venueData.googleMapUrl);
@@ -774,14 +834,11 @@ function renderResults(payload) {
 }
 
 if (modalCloseButton) {
-  modalCloseButton.addEventListener('click', closeEventModal);
-}
-if (eventModalOverlay) {
-  eventModalOverlay.addEventListener('click', closeEventModal);
+  modalCloseButton.addEventListener('click', closeEventCard);
 }
 document.addEventListener('keydown', (evt) => {
-  if (evt.key === 'Escape' && eventModal && !eventModal.classList.contains('hidden')) {
-    closeEventModal();
+  if (evt.key === 'Escape' && eventCard && !eventCard.classList.contains('hidden')) {
+    closeEventCard();
   }
 });
 

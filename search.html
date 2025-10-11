@@ -29,15 +29,14 @@
 							type="text" id="keyword" name="keyword" value="" placeholder="Enter a keyword: e.g. Singer, Sports" required>
 						<label class="block text-lg font-medium text-teal-600 mb-2" for="distance">Distance</label>
 						<input class=" border border-gray-300 bg-transparent text-white rounded-lg p-3 mb-4"
-							type="number" id="distance" name="distance" value="10" step="10">
+							type="number" id="distance" name="distance" value="10" step="10" min="0" max="100">
 						<label class="block text-lg font-medium text-teal-600 mb-2" for="category">Category</label>
 						<select class="bg-transparent text-white border rounded-lg p-3 mb-4" id="category"
 							name="category" value="default">
 							<option value="default">Default</option>
 							<option value="music">Music</option>
 							<option value="sport">Sport</option>
-							<option value="arts">Arts</option>
-							<option value="theatre">Theatre</option>
+							<option value="arts">Arts & Theatre</option>
 							<option value="film">Film</option>
 							<option value="miscell">Miscellaneous</option>
 						</select>
@@ -103,91 +102,116 @@
                         </table>
                     </div>
                 </section>
-				<div id="eventModal" class="fixed inset-0 z-50 hidden">
-					<div id="eventModalOverlay" class="absolute inset-0 bg-black/70"></div>
-						<div class="relative z-10 flex min-h-full items-start justify-center p-4 overflow-y-auto">
-							<div role="dialog" aria-modal="true" aria-labelledby="modalEventTitle" class="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-xl border border-gray-700 bg-gray-900/95 shadow-2xl">
-							<div class="flex items-start justify-between border-b border-gray-700 px-6 py-4">
-								<h2 id="modalEventTitle" class="text-2xl font-semibold text-white">Event Details</h2>
-								<button id="modalCloseButton" type="button" aria-label="Close details"
-									class="text-gray-400 transition hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900">
-									✕
-								</button>
-							</div>
-							<div class="space-y-0 px-6 pt-6 text-sm text-gray-200">
-								<!-- Event Content -->
-								<div id="modalEventContent" class="space-y-6">
-									<div class="grid gap-4 md:grid-cols-2">
-										<dl class="space-y-3">
-											<div>
-												<dt class="uppercase text-xs tracking-wider text-gray-400">Artist / Team</dt>
-												<dd id="modalArtists" class="mt-1 text-base text-white">N/A</dd>
+                
+                <!-- Event Details Card -->
+                <section id="eventCard" class="hidden mt-10">
+                    <div class="rounded-xl border border-gray-700 bg-gray-900/95 shadow-2xl">
+                        <div class="flex items-start justify-between border-b border-gray-700 px-6 py-4">
+                            <h2 id="modalEventTitle" class="text-2xl font-semibold text-white">Event Details</h2>
+                            <button id="modalCloseButton" type="button" aria-label="Close details"
+                                class="text-gray-400 transition hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900">
+                                ✕
+                            </button>
+                        </div>
+							<div class="space-y-0 px-6 pt-6 pb-6 text-sm text-gray-200">
+								<div id="modalEventContent" class="space-y-6 mb-6">
+									<div class="rounded-2xl border border-gray-800/80 bg-gray-900/60 p-6">
+										<div class="flex flex-col gap-6 lg:flex-row lg:items-stretch">
+											<div class="flex-1 space-y-6 lg:pr-6">
+												<div class="grid gap-4 md:grid-cols-2">
+													<dl class="space-y-3">
+														<div id="artistsField">
+															<dt class="uppercase text-xs tracking-wider text-gray-400">Artist / Team</dt>
+															<dd id="modalArtists" class="mt-1 text-base text-white">N/A</dd>
+														</div>
+														<div id="dateField">
+															<dt class="uppercase text-xs tracking-wider text-gray-400">Date</dt>
+															<dd id="modalDate" class="mt-1 text-base text-white">N/A</dd>
+														</div>
+														<div id="timeField">
+															<dt class="uppercase text-xs tracking-wider text-gray-400">Time</dt>
+															<dd id="modalTime" class="mt-1 text-base text-white">N/A</dd>
+														</div>
+														<div id="venueField">
+															<dt class="uppercase text-xs tracking-wider text-gray-400">Venue</dt>
+															<dd id="modalVenue" class="mt-1 text-base text-white">N/A</dd>
+														</div>
+													</dl>
+													<dl class="space-y-3">
+														<div id="genresField">
+															<dt class="uppercase text-xs tracking-wider text-gray-400">Genres</dt>
+															<dd id="modalGenres" class="mt-1 text-base text-white">N/A</dd>
+														</div>
+														<div id="priceRangeField">
+															<dt class="uppercase text-xs tracking-wider text-gray-400">Price Range</dt>
+															<dd id="modalPriceRange" class="mt-1 text-base text-white">N/A</dd>
+														</div>
+														<div id="ticketStatusField">
+															<dt class="uppercase text-xs tracking-wider text-gray-400">Ticket Status</dt>
+															<dd id="modalTicketStatus" class="mt-1 inline-flex items-center rounded-md px-3 py-1 text-sm font-semibold border">N/A</dd>
+														</div>
+														<div id="buyLinkField">
+															<dt class="uppercase text-xs tracking-wider text-gray-400">Buy Ticket At</dt>
+															<dd class="mt-1">
+																<a id="modalBuyLink" href="#" target="_blank" rel="noopener" class="inline-flex items-center gap-2 rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-gray-900">
+																	Purchase Tickets
+																</a>
+															</dd>
+														</div>
+													</dl>
+												</div>
 											</div>
-											<div>
-												<dt class="uppercase text-xs tracking-wider text-gray-400">Date</dt>
-												<dd id="modalDate" class="mt-1 text-base text-white">N/A</dd>
+											<div id="modalSeatMapWrapper" class="hidden flex-1 lg:w-[42%] lg:flex-none">
+												<div class="flex h-full w-full items-center justify-center overflow-hidden rounded-xl bg-black/40 p-4">
+													<img id="modalSeatMap" src="about:blank" alt="Seat map" class="h-full w-full object-contain" />
+												</div>
 											</div>
-											<div>
-												<dt class="uppercase text-xs tracking-wider text-gray-400">Time</dt>
-												<dd id="modalTime" class="mt-1 text-base text-white">N/A</dd>
-											</div>
-											<div>
-												<dt class="uppercase text-xs tracking-wider text-gray-400">Venue</dt>
-												<dd id="modalVenue" class="mt-1 text-base text-white">N/A</dd>
-											</div>
-										</dl>
-										<dl class="space-y-3">
-											<div>
-												<dt class="uppercase text-xs tracking-wider text-gray-400">Genres</dt>
-												<dd id="modalGenres" class="mt-1 text-base text-white">N/A</dd>
-											</div>
-											<div>
-												<dt class="uppercase text-xs tracking-wider text-gray-400">Price Range</dt>
-												<dd id="modalPriceRange" class="mt-1 text-base text-white">N/A</dd>
-											</div>
-											<div>
-												<dt class="uppercase text-xs tracking-wider text-gray-400">Ticket Status</dt>
-												<dd id="modalTicketStatus" class="mt-1 inline-flex items-center rounded-md px-3 py-1 text-sm font-semibold border">N/A</dd>
-											</div>
-											<div>
-												<dt class="uppercase text-xs tracking-wider text-gray-400">Buy Ticket At</dt>
-												<dd class="mt-1">
-													<a id="modalBuyLink" href="#" target="_blank" rel="noopener" class="inline-flex items-center gap-2 rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-gray-900">
-														Purchase Tickets
-													</a>
-												</dd>
-											</div>
-										</dl>
-									</div>
-									<div id="modalSeatMapWrapper" class="hidden border-t border-gray-800 pt-4">
-										<h3 class="mb-3 text-lg font-semibold text-white">Seat Map</h3>
-										<img id="modalSeatMap" src="about:blank" alt="Seat map" class="max-h-96 w-full rounded-lg border border-gray-800 object-contain" />
+										</div>
 									</div>
 								</div>
 
 								<!-- Venue Content (hidden by default until revealed) -->
-								<div id="modalVenueContent" class="hidden mt-6 rounded-lg border border-gray-700 bg-gray-800/60 p-6 space-y-6">
-									<div class="space-y-2">
+								<div id="modalVenueContent" class="hidden mt-8 mb-8 rounded-lg border border-gray-700 bg-gray-800/60 p-6">
+									<!-- Venue Title - Centered -->
+									<div class="text-center mb-6">
 										<h3 class="text-2xl font-semibold text-white" id="venueDetailName">Venue Name</h3>
-										<p class="text-gray-300" id="venueDetailLocation">Venue location details</p>
 									</div>
-									<div class="flex flex-wrap gap-4">
-										<a id="venueGoogleMapLink" href="#" target="_blank" rel="noopener" class="inline-flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-500 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2 focus:ring-offset-gray-900 disabled:opacity-50">Open in Google Map</a>
-										<a id="venueMoreEventsLink" href="#" target="_blank" rel="noopener" class="inline-flex items-center gap-2 rounded-md bg-purple-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 focus:ring-offset-gray-900 disabled:opacity-50">More events in this venue</a>
+									
+									<!-- Venue Details Layout with Vertical Separator -->
+									<div class="flex">
+										<!-- Left Side: Address and Google Maps Link -->
+										<div class="flex-1 pr-6">
+											<div class="space-y-4">
+												<div>
+													<p class="text-sm font-medium text-gray-400 mb-1">Address:</p>
+													<p class="text-gray-300" id="venueDetailLocation">Venue location details</p>
+												</div>
+												<a id="venueGoogleMapLink" href="#" target="_blank" rel="noopener" class="inline-block text-blue-400 hover:text-blue-300 transition-colors text-sm font-medium">
+													Open in Google Maps
+												</a>
+											</div>
+										</div>
+										
+										<!-- Vertical Border -->
+										<div class="w-px bg-gray-600 mx-6"></div>
+										
+										<!-- Right Side: More Events Link -->
+										<div class="flex-1 pl-6 flex items-center justify-center">
+											<a id="venueMoreEventsLink" href="#" target="_blank" rel="noopener" class="text-blue-400 hover:text-blue-300 transition-colors text-sm font-medium">
+												More events at this venue
+											</a>
+										</div>
 									</div>
 								</div>
-
-								<!-- One-time Reveal Button -->
-								<div id="venueRevealBar" class="mt-6 -mx-6 border-t border-gray-800 bg-gray-800/40 px-6 py-3">
-									<button id="venueToggleButton" type="button" class="w-full flex items-center justify-center gap-2 text-sm font-medium text-blue-300 hover:text-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-gray-900">
-										<span id="venueToggleIcon" class="transition-transform">▼</span>
-										<span id="venueToggleText">Show Venue Details</span>
-									</button>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
+                        </div>
+                        <div id="venueRevealBar" class="mt-6 -mx-6 border-t border-gray-800 bg-gray-800/40 px-6 py-3">
+                            <button id="venueToggleButton" type="button" class="w-full flex items-center justify-center gap-2 text-sm font-medium text-blue-300 hover:text-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-gray-900">
+                                <span id="venueToggleIcon" class="transition-transform">▼</span>
+                                <span id="venueToggleText">Show Venue Details</span>
+                            </button>
+                        </div>
+                    </div>
+                </section>
 			</main>
 
 			<footer class="text-center mt-12 py-6 border-t border-gray-200">
