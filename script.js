@@ -1,7 +1,7 @@
 //Server Url Debug
 const serverURL_Debug = 'http://127.0.0.1:5000';
 const googleCloudUrl='https://eventsearcher-server.wl.r.appspot.com'
-const debugMode = true // 'debug' or 'production'
+const debugMode = false // 'debug' or 'production'
 // Results UI elements
 const resultsTableWrapper = document.getElementById('resultsTableWrapper');
 const resultsBody = document.getElementById('resultsBody');
